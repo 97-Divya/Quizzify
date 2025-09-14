@@ -1,36 +1,59 @@
-import React, { useEffect, useState } from "react";
-import { Container, Paper, Typography, TextField, Button, Box, Grid, IconButton } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Container, Paper, Typography, TextField, Button, Grid, IconButton, Box } from "@mui/material";
 import { AddCircle, RemoveCircle } from "@mui/icons-material";
 import axios from "axios";
-import { useParams, useNavigate } from "react-router-dom";
 
-const UpdateQuiz = ({ role }) => {
+const UpdateQuiz = () => {
   const { quizId } = useParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`http://localhost:8080/api/quiz/${quizId}`)
-      .then(res => {
-        setTitle(res.data.title);
-        setQuestions(res.data.questions);
+    axios.get(`http://localhost:8080/api/quiz/questions/${quizId}`)
+      .then((res) => {
+        setQuestions(res.data.map(q => ({
+          id: q.id,
+          questionText: q.questionText,
+          optionA: q.optionA,
+          optionB: q.optionB,
+          optionC: q.optionC,
+          optionD: q.optionD,
+          correctAnswer: q.correctAnswer
+        })));
+        return axios.get(`http://localhost:8080/api/quiz/all`);
       })
-      .catch(err => console.error(err));
+      .then(res => {
+        const quiz = res.data.find(q => q.id === parseInt(quizId));
+        setTitle(quiz.title);
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
   }, [quizId]);
 
   const handleAddQuestion = () => setQuestions([...questions, { questionText: "", optionA: "", optionB: "", optionC: "", optionD: "", correctAnswer: "" }]);
   const handleRemoveQuestion = (i) => setQuestions(questions.filter((_, idx) => idx !== i));
-  const handleChange = (i, field, val) => { const q = [...questions]; q[i][field] = val; setQuestions(q); };
+  const handleChange = (i, field, val) => {
+    const q = [...questions];
+    q[i][field] = val;
+    setQuestions(q);
+  };
 
   const handleUpdate = () => {
-    axios.put(`http://localhost:8080/api/quiz/update/${quizId}`, { title, createdByRole: role, questions })
+    if (!title) return alert("Title required");
+    for (let q of questions) if (!q.questionText || !q.optionA || !q.optionB || !q.optionC || !q.optionD || !q.correctAnswer) return alert("All fields required");
+
+    axios.put(`http://localhost:8080/api/quiz/update/${quizId}`, { title, questions })
       .then(() => {
         alert("Quiz updated!");
-        navigate("/dashboard/admin");
+        navigate("/dashboard/instructor");
       })
       .catch(err => console.error(err));
   };
+
+  if (loading) return <p>Loading quiz...</p>;
 
   return (
     <Container maxWidth="md">

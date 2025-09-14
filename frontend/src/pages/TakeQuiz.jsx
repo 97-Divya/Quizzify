@@ -11,6 +11,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 // Error boundary
 class ErrorBoundary extends React.Component {
@@ -45,6 +46,8 @@ const TakeQuizContent = ({ studentUsername }) => {
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
 
+  const navigate = useNavigate();
+
   if (!studentUsername) {
     return (
       <Container maxWidth="sm">
@@ -60,15 +63,7 @@ const TakeQuizContent = ({ studentUsername }) => {
     setLoading(true);
     axios
       .get("http://localhost:8080/api/quiz/all")
-      .then((res) => {
-        if (Array.isArray(res.data)) {
-          setQuizzes(res.data);
-        } else if (res.data) {
-          setQuizzes([res.data]);
-        } else {
-          setQuizzes([]);
-        }
-      })
+      .then((res) => setQuizzes(res.data || []))
       .catch((err) => {
         console.error(err);
         setQuizzes([]);
@@ -76,7 +71,7 @@ const TakeQuizContent = ({ studentUsername }) => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Load questions when quiz is selected
+  // Load questions when a quiz is selected
   useEffect(() => {
     if (!selectedQuizId) return;
     setLoading(true);
@@ -97,34 +92,26 @@ const TakeQuizContent = ({ studentUsername }) => {
 
   const handleNext = () => setCurrentIndex((prev) => prev + 1);
 
-  const handleSubmit = async () => {
-    if (!questions.length) return;
+const handleSubmit = async () => {
+  if (!questions.length) return;
 
-    try {
-      const payload = {
-        quizId: selectedQuizId,
-        studentUsername,
-        answers, // { questionId: "A" }
-      };
+  try {
+    const payload = {
+      quizId: selectedQuizId,
+      studentUsername,
+      answers, // { questionId: "A" }
+    };
 
-      const response = await axios.post(
-        "http://localhost:8080/api/quiz/attempt",
-        payload
-      );
+    await axios.post("http://localhost:8080/api/user/attempt", payload);
 
-      alert(
-        `Quiz submitted! Your score: ${response.data.score}/${response.data.totalQuestions}`
-      );
-
-      setSelectedQuizId(null);
-      setQuestions([]);
-      setCurrentIndex(0);
-      setAnswers({});
-    } catch (err) {
-      console.error(err);
-      alert("Failed to submit quiz");
-    }
-  };
+    // Show a simple alert and redirect to MyScore
+    alert("Quiz submitted successfully!");
+    navigate("/my-score"); // Make sure this route renders MyScore component
+  } catch (err) {
+    console.error(err);
+    alert("Failed to submit quiz");
+  }
+};
 
   if (loading) {
     return (

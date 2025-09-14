@@ -13,6 +13,8 @@ public class Quiz {
     private String title;
     private String createdByRole;
 
+    private String createdByUsername; // ADD THIS FIELD
+
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Question> questions;
@@ -24,6 +26,8 @@ public class Quiz {
     public void setTitle(String title) { this.title = title; }
     public String getCreatedByRole() { return createdByRole; }
     public void setCreatedByRole(String createdByRole) { this.createdByRole = createdByRole; }
+    public String getCreatedByUsername() { return createdByUsername; }
+    public void setCreatedByUsername(String createdByUsername) { this.createdByUsername = createdByUsername; }
     public List<Question> getQuestions() { return questions; }
     public void setQuestions(List<Question> questions) { this.questions = questions; }
 }

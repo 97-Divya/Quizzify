@@ -10,7 +10,7 @@ const Login = ({ setUserRole, setUsername }) => {
 
   const handleLogin = async () => {
     try {
-      const res = await axios.post("http://localhost:8080/api/login", {
+      const res = await axios.post("http://localhost:8080/api/user/login", {
         username: usernameLocal,
         password,
       });

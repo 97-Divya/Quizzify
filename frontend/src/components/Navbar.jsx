@@ -15,6 +15,7 @@ const Navbar = ({ userRole, username, setUserRole, setUsername }) => {
     <AppBar position="static" color="primary">
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
         <Typography variant="h6">MyApp</Typography>
+
         <div>
           {!userRole && (
             <>
@@ -23,17 +24,20 @@ const Navbar = ({ userRole, username, setUserRole, setUsername }) => {
             </>
           )}
 
-          {(userRole === "instructor" || userRole === "admin") && (
+          {/* For all logged-in users, show only Dashboard and Logout */}
+          {userRole && (
             <>
-              <Button color="inherit" component={Link} to="/add-quiz">Add Quiz</Button>
-              <Button color="inherit" onClick={handleLogout}>Logout</Button>
-            </>
-          )}
-
-          {userRole === "student" && (
-            <>
-              <Button color="inherit" component={Link} to="/take-quiz">Take Quiz</Button>
-              <Button color="inherit" component={Link} to="/my-score">My Score</Button>
+              <Button
+                color="inherit"
+                onClick={() => {
+                  // Redirect based on role
+                  if (userRole === "student") navigate("/dashboard/student");
+                  else if (userRole === "instructor") navigate("/dashboard/instructor");
+                  else if (userRole === "admin") navigate("/admin");
+                }}
+              >
+                Dashboard
+              </Button>
               <Button color="inherit" onClick={handleLogout}>Logout</Button>
             </>
           )}

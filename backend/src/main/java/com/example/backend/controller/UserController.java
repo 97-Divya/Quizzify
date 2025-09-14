@@ -1,7 +1,15 @@
 package com.example.backend.controller;
 
+import com.example.backend.Entity.Attempt;
+import com.example.backend.Entity.Quiz;
 import com.example.backend.Entity.User;
+import com.example.backend.Repository.AttemptRepository;
+import com.example.backend.Repository.QuizRepository;
 import com.example.backend.Repository.UserRepository;
+import com.example.backend.dto.QuizAttemptRequest;
+import com.example.backend.dto.StudentAttemptDto;
+import com.example.backend.dto.StudentStatsDto;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,84 +17,106 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:5173") // Vite frontend
+@RequestMapping("/api/user")
+@CrossOrigin(origins = "http://localhost:5173") // allow frontend calls
 public class UserController {
 
     @Autowired
     private UserRepository userRepository;
 
-    // Register user
+    @Autowired
+    private AttemptRepository attemptRepository;
+
+    @Autowired
+    private QuizRepository quizRepository;
+
+    // --------------------- AUTH -----------------------
     @PostMapping("/register")
     public ResponseEntity<User> register(@RequestBody User user) {
         return ResponseEntity.ok(userRepository.save(user));
     }
 
-    // Login user
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody User user) {
         Optional<User> existingUser = userRepository.findByUsername(user.getUsername());
         if (existingUser.isPresent() && existingUser.get().getPassword().equals(user.getPassword())) {
-            return ResponseEntity.ok(existingUser.get().getRole()); // send role
+            return ResponseEntity.ok(existingUser.get().getRole());
         } else {
             return ResponseEntity.status(401).body("Invalid credentials");
         }
     }
 
-    // Dashboard
-    @GetMapping("/dashboard/{role}")
-    public ResponseEntity<String> dashboard(@PathVariable String role) {
-        switch (role.toLowerCase()) {
-            case "student":
-                return ResponseEntity.ok("Welcome Student Dashboard!");
-            case "instructor":
-                return ResponseEntity.ok("Welcome Instructor Dashboard!");
-            case "admin":
-                return ResponseEntity.ok("Welcome Admin Dashboard!");
-            default:
-                return ResponseEntity.status(403).body("Access Denied");
+    // --------------------- QUIZ ATTEMPT -----------------------
+    @PostMapping("/attempt")
+    public ResponseEntity<?> attemptQuiz(@RequestBody QuizAttemptRequest attemptRequest) {
+
+        Quiz quiz = quizRepository.findById(attemptRequest.getQuizId())
+                .orElseThrow(() -> new RuntimeException("Quiz not found"));
+
+        if (quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
+            return ResponseEntity.badRequest().body("Quiz has no questions");
         }
-    }
 
-    // --------------------- ADMIN CRUD -----------------------
-
-    // Get all students
-    @GetMapping("/admin/students")
-    public List<User> getAllStudents() {
-        return userRepository.findByRole("student");
-    }
-
-    // Get all instructors
-    @GetMapping("/admin/instructors")
-    public List<User> getAllInstructors() {
-        return userRepository.findByRole("instructor");
-    }
-
-    // Create student/instructor
-    @PostMapping("/admin/users")
-    public User createUser(@RequestBody User user) {
-        return userRepository.save(user);
-    }
-
-    // Update user
-    @PutMapping("/admin/users/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
-        return userRepository.findById(id)
-                .map(user -> {
-                    user.setUsername(userDetails.getUsername());
-                    user.setPassword(userDetails.getPassword());
-                    user.setRole(userDetails.getRole());
-                    return ResponseEntity.ok(userRepository.save(user));
-                }).orElse(ResponseEntity.notFound().build());
-    }
-
-    // Delete user
-    @DeleteMapping("/admin/users/{id}")
-    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
-        if (userRepository.existsById(id)) {
-            userRepository.deleteById(id);
-            return ResponseEntity.ok("User deleted successfully");
+        int score = 0;
+        for (var q : quiz.getQuestions()) {
+            String userAnswer = attemptRequest.getAnswers().get(q.getId());
+            if (userAnswer != null && userAnswer.equalsIgnoreCase(q.getCorrectAnswer())) {
+                score++;
+            }
         }
-        return ResponseEntity.status(404).body("User not found");
+
+        Attempt attempt = new Attempt();
+        attempt.setQuizId(quiz.getId());
+        attempt.setStudentUsername(attemptRequest.getStudentUsername());
+        attempt.setScore(score);
+        attempt.setTotal(quiz.getQuestions().size());
+
+        attemptRepository.save(attempt);
+
+        return ResponseEntity.ok(Map.of(
+                "quizId", quiz.getId(),
+                "score", score,
+                "totalQuestions", quiz.getQuestions().size()
+        ));
+    }
+
+    // --------------------- STUDENT STATS -----------------------
+    @GetMapping("/{username}/stats")
+    public ResponseEntity<StudentStatsDto> getStudentStats(@PathVariable String username) {
+        Object[] stats = attemptRepository.findStudentStats(username);
+
+        if (stats == null || stats.length < 4) {
+            return ResponseEntity.ok(new StudentStatsDto(0, 0, 0, 0));
+        }
+
+        long quizzesTaken = (long) stats[0];
+        Double avgScore = (Double) stats[1];
+        Integer highest = (Integer) stats[2];
+        Integer lowest = (Integer) stats[3];
+
+        StudentStatsDto dto = new StudentStatsDto(
+                quizzesTaken,
+                avgScore != null ? avgScore : 0.0,
+                highest != null ? highest : 0,
+                lowest != null ? lowest : 0
+        );
+
+        return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/{username}/attempts")
+    public ResponseEntity<List<StudentAttemptDto>> getStudentAttempts(@PathVariable String username) {
+        List<Attempt> attempts = attemptRepository.findByStudentUsername(username);
+
+        List<StudentAttemptDto> dtoList = attempts.stream()
+                .map(a -> {
+                    String title = quizRepository.findById(a.getQuizId())
+                            .map(Quiz::getTitle)
+                            .orElse("Unknown Quiz");
+                    return new StudentAttemptDto(a.getQuizId(), title, a.getScore(), a.getTotal());
+                })
+                .toList();
+
+        return ResponseEntity.ok(dtoList);
     }
 }
