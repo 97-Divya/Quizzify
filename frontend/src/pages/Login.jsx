@@ -1,57 +1,65 @@
 import React, { useState } from "react";
-import { Container, Box, TextField, Button, Typography, Paper } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import "./Auth.css";
 
 const Login = ({ setUserRole, setUsername }) => {
-  const [usernameLocal, setUsernameLocal] = useState("");
+  const [username, setLocalUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:8080/api/user/login", {
-        username: usernameLocal,
-        password,
-      });
+      const res = await axios.post("http://localhost:8080/api/user/login", { username, password });
       const role = res.data;
 
-      // Update global App state
+      localStorage.setItem("username", username);
+      localStorage.setItem("role", role);
+
+      setUsername(username);
       setUserRole(role);
-      setUsername(usernameLocal);
 
       navigate(`/dashboard/${role}`);
     } catch (err) {
+      console.error(err);
       alert("Invalid credentials");
     }
   };
 
   return (
-    <Container maxWidth="sm">
-      <Paper sx={{ mt: 8, p: 4, backgroundColor: "background.paper" }} elevation={3}>
-        <Typography variant="h4" mb={3} align="center">Login</Typography>
-        <Box display="flex" flexDirection="column" gap={2}>
-          <TextField
-            label="Username"
-            variant="outlined"
-            fullWidth
-            value={usernameLocal}
-            onChange={(e) => setUsernameLocal(e.target.value)}
-          />
-          <TextField
-            label="Password"
-            type="password"
-            variant="outlined"
-            fullWidth
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <Button variant="contained" color="primary" fullWidth onClick={handleLogin}>
-            Login
-          </Button>
-        </Box>
-      </Paper>
-    </Container>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2 className="auth-title">Log in</h2>
+        <p className="auth-subtitle">to start learning</p>
+        <form onSubmit={handleLogin} className="auth-form">
+          <div className="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              placeholder="Enter username"
+              value={username}
+              onChange={(e) => setLocalUsername(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <button type="submit" className="auth-button">Log in →</button>
+        </form>
+        <p className="auth-footer">
+          Don't have an account? <span className="auth-link" onClick={() => navigate("/register")}>Sign up now</span>
+        </p>
+      </div>
+    </div>
   );
 };
 

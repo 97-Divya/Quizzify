@@ -1,82 +1,29 @@
-import React, { useEffect, useState } from "react";
-import {
-  Container,
-  Paper,
-  Typography,
-  Button,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Box,
-  CircularProgress,
-} from "@mui/material";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import "./Dashboard.css"; // Reuse CSS for card styling
 
-// Error boundary
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <Container maxWidth="sm">
-          <Paper sx={{ mt: 8, p: 4 }}>
-            <Typography color="error" variant="h6">
-              Something went wrong while loading the quiz.
-            </Typography>
-          </Paper>
-        </Container>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-const TakeQuizContent = ({ studentUsername }) => {
+const TakeQuiz = ({ onBack }) => {
   const [quizzes, setQuizzes] = useState([]);
-  const [selectedQuizId, setSelectedQuizId] = useState(null);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const navigate = useNavigate();
+  const studentUsername = localStorage.getItem("username");
 
-  if (!studentUsername) {
-    return (
-      <Container maxWidth="sm">
-        <Paper sx={{ mt: 8, p: 4 }}>
-          <Typography>Please login first to take a quiz.</Typography>
-        </Paper>
-      </Container>
-    );
-  }
-
-  // Load all quizzes
   useEffect(() => {
     setLoading(true);
-    axios
-      .get("http://localhost:8080/api/quiz/all")
+    axios.get("http://localhost:8080/api/quiz/all")
       .then((res) => setQuizzes(res.data || []))
-      .catch((err) => {
-        console.error(err);
-        setQuizzes([]);
-      })
+      .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, []);
 
-  // Load questions when a quiz is selected
   useEffect(() => {
-    if (!selectedQuizId) return;
+    if (!selectedQuiz) return;
     setLoading(true);
-    axios
-      .get(`http://localhost:8080/api/quiz/questions/${selectedQuizId}`)
+    axios.get(`http://localhost:8080/api/quiz/questions/${selectedQuiz.id}`)
       .then((res) => {
         setQuestions(res.data || []);
         setCurrentIndex(0);
@@ -84,7 +31,7 @@ const TakeQuizContent = ({ studentUsername }) => {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [selectedQuizId]);
+  }, [selectedQuiz]);
 
   const handleAnswerChange = (questionId, value) => {
     setAnswers({ ...answers, [questionId]: value });
@@ -92,114 +39,87 @@ const TakeQuizContent = ({ studentUsername }) => {
 
   const handleNext = () => setCurrentIndex((prev) => prev + 1);
 
-const handleSubmit = async () => {
-  if (!questions.length) return;
+  const handleSubmit = async () => {
+    try {
+      await axios.post("http://localhost:8080/api/user/attempt", {
+        quizId: selectedQuiz.id,
+        studentUsername,
+        answers,
+      });
+      alert("Quiz submitted successfully!");
+      setSelectedQuiz(null);
+      setQuestions([]);
+      setAnswers({});
+      if (onBack) onBack();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit quiz");
+    }
+  };
 
-  try {
-    const payload = {
-      quizId: selectedQuizId,
-      studentUsername,
-      answers, // { questionId: "A" }
-    };
+  if (loading) return <p style={{ textAlign: "center", marginTop: "50px" }}>Loading...</p>;
 
-    await axios.post("http://localhost:8080/api/user/attempt", payload);
-
-    // Show a simple alert and redirect to MyScore
-    alert("Quiz submitted successfully!");
-    navigate("/my-score"); // Make sure this route renders MyScore component
-  } catch (err) {
-    console.error(err);
-    alert("Failed to submit quiz");
-  }
-};
-
-  if (loading) {
+  // Quiz selection view
+  if (!selectedQuiz) {
     return (
-      <Container maxWidth="sm">
-        <Paper sx={{ mt: 8, p: 4, textAlign: "center" }}>
-          <CircularProgress />
-          <Typography mt={2}>Loading...</Typography>
-        </Paper>
-      </Container>
-    );
-  }
-
-  // Quiz selection screen
-  if (!selectedQuizId) {
-    return (
-      <Container maxWidth="sm">
-        <Paper sx={{ mt: 8, p: 4 }}>
-          <Typography variant="h5" mb={2}>
-            Select a Quiz
-          </Typography>
+      <div className="dashboard-container">
+        <div className="dashboard-card">
+          <h3 className="dashboard-title">Select a Quiz</h3>
           {quizzes.length === 0 ? (
-            <Typography>No quizzes available.</Typography>
+            <p>No quizzes available.</p>
           ) : (
             quizzes.map((q) => (
-              <Button
+              <button
                 key={q.id}
-                variant="outlined"
-                fullWidth
-                sx={{ mb: 1 }}
-                onClick={() => setSelectedQuizId(q.id)}
+                className="quiz-select-button"
+                onClick={() => setSelectedQuiz(q)}
               >
                 {q.title}
-              </Button>
+              </button>
             ))
           )}
-        </Paper>
-      </Container>
+          <button className="back-button" onClick={onBack}>Back</button>
+        </div>
+      </div>
     );
   }
 
-  const currentQuestion = questions?.[currentIndex];
-  if (!currentQuestion) return null;
+  // Current question view
+  const currentQuestion = questions[currentIndex];
+  if (!currentQuestion) return <p style={{ textAlign: "center", marginTop: "50px" }}>Quiz completed!</p>;
 
   return (
-    <Container maxWidth="sm">
-      <Paper sx={{ mt: 8, p: 4 }}>
-        <Typography variant="h6" mb={2}>
+    <div className="dashboard-container">
+      <div className="dashboard-card">
+        <h4 className="dashboard-title">
           Question {currentIndex + 1} of {questions.length}
-        </Typography>
-        <Typography mb={2}>{currentQuestion.questionText}</Typography>
+        </h4>
+        <p className="question-text">{currentQuestion.questionText}</p>
 
-        <RadioGroup
-          value={answers[currentQuestion.id] || ""}
-          onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-        >
-          <FormControlLabel value="A" control={<Radio />} label={currentQuestion.optionA} />
-          <FormControlLabel value="B" control={<Radio />} label={currentQuestion.optionB} />
-          <FormControlLabel value="C" control={<Radio />} label={currentQuestion.optionC} />
-          <FormControlLabel value="D" control={<Radio />} label={currentQuestion.optionD} />
-        </RadioGroup>
+        <div className="options-container">
+          {["A", "B", "C", "D"].map((opt) => (
+            <div
+              key={opt}
+              className={`option-box ${answers[currentQuestion.id] === opt ? "selected-option" : ""}`}
+              onClick={() => handleAnswerChange(currentQuestion.id, opt)}
+            >
+              {currentQuestion[`option${opt}`]}
+            </div>
+          ))}
+        </div>
 
-        <Box mt={2} display="flex" justifyContent="space-between">
+        <div className="quiz-actions">
           {currentIndex < questions.length - 1 ? (
-            <Button variant="contained" onClick={handleNext}>
-              Next
-            </Button>
+            <button className="submit-button" onClick={handleNext}>Next</button>
           ) : (
-            <Button variant="contained" color="success" onClick={handleSubmit}>
-              Submit Quiz
-            </Button>
+            <button className="submit-button" onClick={handleSubmit}>Submit Quiz</button>
           )}
-          <Button
-            variant="outlined"
-            color="secondary"
-            onClick={() => setSelectedQuizId(null)}
-          >
-            Back to Quiz List
-          </Button>
-        </Box>
-      </Paper>
-    </Container>
+        </div>
+      </div>
+
+      <button className="back-button" onClick={onBack}>Back</button>
+    </div>
   );
 };
-
-const TakeQuiz = (props) => (
-  <ErrorBoundary>
-    <TakeQuizContent {...props} />
-  </ErrorBoundary>
-);
 
 export default TakeQuiz;

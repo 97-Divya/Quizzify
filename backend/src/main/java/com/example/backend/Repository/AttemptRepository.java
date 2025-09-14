@@ -9,11 +9,15 @@ import java.util.List;
 
 public interface AttemptRepository extends JpaRepository<Attempt, Long> {
 
-    List<Attempt> findByQuizId(Long quizId);
+    List<Attempt> findByQuiz_Id(Long quizId); // updated to match ManyToOne field
 
     List<Attempt> findByStudentUsername(String studentUsername);
 
-    // Custom query to get student stats: count, avg score, max score, min score
+    // Stats for all quizzes (highest, avg)
+    @Query("SELECT a.quiz.id, MAX(a.score), AVG(a.score) FROM Attempt a GROUP BY a.quiz.id")
+    List<Object[]> getQuizStats();
+
+    // Stats for a specific student
     @Query("SELECT COUNT(a), AVG(a.score), MAX(a.score), MIN(a.score) " +
            "FROM Attempt a WHERE a.studentUsername = :username")
     Object[] findStudentStats(@Param("username") String username);

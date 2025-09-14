@@ -65,8 +65,9 @@ public class UserController {
             }
         }
 
+        // Save attempt
         Attempt attempt = new Attempt();
-        attempt.setQuizId(quiz.getId());
+        attempt.setQuiz(quiz); // set Quiz object
         attempt.setStudentUsername(attemptRequest.getStudentUsername());
         attempt.setScore(score);
         attempt.setTotal(quiz.getQuestions().size());
@@ -104,16 +105,16 @@ public class UserController {
         return ResponseEntity.ok(dto);
     }
 
+    // --------------------- STUDENT ATTEMPTS -----------------------
     @GetMapping("/{username}/attempts")
     public ResponseEntity<List<StudentAttemptDto>> getStudentAttempts(@PathVariable String username) {
         List<Attempt> attempts = attemptRepository.findByStudentUsername(username);
 
         List<StudentAttemptDto> dtoList = attempts.stream()
                 .map(a -> {
-                    String title = quizRepository.findById(a.getQuizId())
-                            .map(Quiz::getTitle)
-                            .orElse("Unknown Quiz");
-                    return new StudentAttemptDto(a.getQuizId(), title, a.getScore(), a.getTotal());
+                    String title = a.getQuiz() != null ? a.getQuiz().getTitle() : "Unknown Quiz";
+                    Long quizId = a.getQuiz() != null ? a.getQuiz().getId() : null;
+                    return new StudentAttemptDto(quizId, title, a.getScore(), a.getTotal());
                 })
                 .toList();
 
