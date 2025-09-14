@@ -1,5 +1,7 @@
 package com.example.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class StudentAttemptDto {
     private Long quizId;
     private String quizTitle;
@@ -17,4 +19,10 @@ public class StudentAttemptDto {
     public String getQuizTitle() { return quizTitle; }
     public int getScore() { return score; }
     public int getTotal() { return total; }
+
+    // Provide "title" JSON property too (alias) so frontend can use attempt.title
+    @JsonProperty("title")
+    public String getTitle() {
+        return this.quizTitle;
+    }
 }

@@ -1,110 +1,88 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Container, Paper, Typography, Button, Grid } from "@mui/material";
+import { Button, Card, CardContent, Typography, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
 const InstructorDashboard = ({ username }) => {
-  const [myQuizzes, setMyQuizzes] = useState([]);
   const [allQuizzes, setAllQuizzes] = useState([]);
+  const [myQuizzes, setMyQuizzes] = useState([]);
   const navigate = useNavigate();
 
-  // Fetch quizzes created by this instructor
-  const fetchMyQuizzes = async () => {
-    try {
-      const res = await axios.get(`http://localhost:8080/api/quiz/instructor/${username}/quizzes`);
-      setMyQuizzes(res.data);
-    } catch (err) {
-      console.error(err);
-      setMyQuizzes([]);
-    }
-  };
-
-  // Fetch all quizzes
-  const fetchAllQuizzes = async () => {
-    try {
-      const res = await axios.get("http://localhost:8080/api/quiz/all");
-      setAllQuizzes(res.data);
-    } catch (err) {
-      console.error(err);
-      setAllQuizzes([]);
-    }
-  };
-
   useEffect(() => {
-    fetchMyQuizzes();
-    fetchAllQuizzes();
+    // All quizzes
+    axios
+      .get("http://localhost:8080/api/quiz/all")
+      .then((res) => setAllQuizzes(res.data || []))
+      .catch((err) => { console.error("Failed to load all quizzes", err); setAllQuizzes([]); });
+
+    // My quizzes
+    if (username) {
+      axios
+        .get(`http://localhost:8080/api/quiz/instructor/${encodeURIComponent(username)}/quizzes`)
+        .then((res) => setMyQuizzes(res.data || []))
+        .catch((err) => { console.error("Failed to load my quizzes", err); setMyQuizzes([]); });
+    }
   }, [username]);
 
   return (
-    <Container sx={{ mt: 5 }}>
-      <Typography variant="h4" mb={3}>Instructor Dashboard</Typography>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom align="center">Instructor Dashboard</Typography>
 
-      {/* Add Quiz Button */}
-      <Button variant="contained" color="primary" onClick={() => navigate("/add-quiz")}>
-        Create New Quiz
-      </Button>
+      <Box sx={{ mb: 3 }}>
+        <Button variant="contained" color="primary" onClick={() => navigate("/add-quiz")}>
+          Add New Quiz
+        </Button>
+      </Box>
 
-      <Typography variant="h5" mt={4} mb={2}>My Quizzes</Typography>
-      {myQuizzes.length === 0 ? (
-        <Typography>No quizzes created yet.</Typography>
-      ) : (
-        <Grid container spacing={2}>
-          {myQuizzes.map((quiz) => (
-            <Grid item xs={12} md={6} key={quiz.id}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6">{quiz.title}</Typography>
-                <Button
-                  variant="outlined"
-                  sx={{ mr: 1, mt: 1 }}
-                  onClick={() => navigate(`/update-quiz/${quiz.id}`)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="outlined"
-                  sx={{ mt: 1 }}
-                  onClick={() => navigate(`/student-attempts/${quiz.id}`)}
-                >
-                  View Students/Scores
-                </Button>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
-      )}
+      {/* All Quizzes - view only (no edit) */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>All Quizzes</Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+            {allQuizzes.map((quiz) => (
+              <Card key={quiz.id} sx={{ p: 2, minWidth: 220 }}>
+                <Typography sx={{ mb: 1 }}>{quiz.title}</Typography>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button size="small" variant="outlined" onClick={() => navigate(`/quiz/${quiz.id}/view`)}>
+                    View Quiz
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => navigate(`/quiz/${quiz.id}/attempts`)}>
+                    View Scores
+                  </Button>
+                </Box>
+              </Card>
+            ))}
+            {allQuizzes.length === 0 && <Typography>No quizzes available.</Typography>}
+          </Box>
+        </CardContent>
+      </Card>
 
-      <Typography variant="h5" mt={4} mb={2}>All Quizzes</Typography>
-      {allQuizzes.length === 0 ? (
-        <Typography>No quizzes available.</Typography>
-      ) : (
-        <Grid container spacing={2}>
-          {allQuizzes.map((quiz) => (
-            <Grid item xs={12} md={6} key={quiz.id}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6">{quiz.title}</Typography>
-                {/* Show edit button only if instructor created this quiz */}
-                {quiz.createdByUsername === username && (
-                  <Button
-                    variant="outlined"
-                    sx={{ mr: 1, mt: 1 }}
-                    onClick={() => navigate(`/update-quiz/${quiz.id}`)}
-                  >
+      {/* My Quizzes - edit + view + view scores */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>My Quizzes</Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+            {myQuizzes.map((quiz) => (
+              <Card key={quiz.id} sx={{ p: 2, minWidth: 220 }}>
+                <Typography sx={{ mb: 1 }}>{quiz.title}</Typography>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button size="small" variant="outlined" onClick={() => navigate(`/quiz/${quiz.id}/view`)}>
+                    View Quiz
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => navigate(`/quiz/${quiz.id}/attempts`)}>
+                    View Scores
+                  </Button>
+                  <Button size="small" variant="contained" onClick={() => navigate(`/update-quiz/${quiz.id}`)}>
                     Edit
                   </Button>
-                )}
-                <Button
-                  variant="outlined"
-                  sx={{ mt: 1 }}
-                  onClick={() => navigate(`/student-attempts/${quiz.id}`)}
-                >
-                  View Students/Scores
-                </Button>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-    </Container>
+                </Box>
+              </Card>
+            ))}
+            {myQuizzes.length === 0 && <Typography>You haven't created any quizzes yet.</Typography>}
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 

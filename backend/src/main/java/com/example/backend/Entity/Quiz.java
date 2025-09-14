@@ -12,14 +12,13 @@ public class Quiz {
 
     private String title;
     private String createdByRole;
-
-    private String createdByUsername; // ADD THIS FIELD
+    private String createdByUsername;
 
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Question> questions;
 
-    // Getters and setters
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTitle() { return title; }

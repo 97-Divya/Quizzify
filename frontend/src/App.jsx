@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -12,6 +12,8 @@ import MyScore from "./pages/MyScore";
 import InstructorDashboard from "./pages/InstructorDashboard";
 import StudentAttempts from "./pages/StudentAttempts";
 import ProtectedRoute from "./components/ProtectedRoute";
+import QuizDetails from "./pages/QuizDetails";
+import ViewQuiz from "./pages/ViewQuiz";
 
 function App() {
   const [userRole, setUserRole] = useState("");
@@ -71,22 +73,39 @@ function App() {
         />
 
         {/* Instructor Routes */}
-        <Route
-          path="/dashboard/instructor"
-          element={
-            <ProtectedRoute userRole={userRole} allowedRoles={["instructor"]}>
-              <InstructorDashboard username={username} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/student-attempts/:quizId"
-          element={
-            <ProtectedRoute userRole={userRole} allowedRoles={["instructor"]}>
-              <StudentAttempts />
-            </ProtectedRoute>
-          }
-        />
+<Route
+  path="/dashboard/instructor"
+  element={
+    <ProtectedRoute userRole={userRole} allowedRoles={["instructor"]}>
+      <InstructorDashboard username={username} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/quiz/:quizId/view"
+  element={
+    <ProtectedRoute userRole={userRole} allowedRoles={["instructor","admin","student"]}>
+      <ViewQuiz />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/student-attempts/:quizId"
+  element={
+    <ProtectedRoute userRole={userRole} allowedRoles={["instructor"]}>
+      <StudentAttempts />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/quiz/:quizId/attempts"
+  element={
+    <ProtectedRoute userRole={userRole} allowedRoles={["instructor","admin"]}>
+      <StudentAttempts />
+    </ProtectedRoute>
+  }
+/>
 
         {/* Student Routes */}
         <Route
@@ -97,14 +116,13 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/my-score"
-          element={
-            <ProtectedRoute userRole={userRole} allowedRoles={["student"]}>
-              <MyScore studentUsername={username} />
-            </ProtectedRoute>
-          }
-        />
+<Route path="/my-score" element={
+  <ProtectedRoute userRole={userRole} allowedRoles={["student"]}>
+    <MyScore studentUsername={username} />
+  </ProtectedRoute>
+} />
+<Route path="/quiz/:quizId/view" element={<ViewQuiz />} />
+
       </Routes>
     </>
   );
