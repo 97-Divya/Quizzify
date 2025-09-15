@@ -8,7 +8,10 @@ public class Attempt {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long quizId;
+    @ManyToOne
+    @JoinColumn(name = "quiz_id", nullable = false)
+    private Quiz quiz;
+
     private int score;
     private int total;
     private String studentUsername;
@@ -17,8 +20,8 @@ public class Attempt {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public Long getQuizId() { return quizId; }
-    public void setQuizId(Long quizId) { this.quizId = quizId; }
+    public Quiz getQuiz() { return quiz; }
+    public void setQuiz(Quiz quiz) { this.quiz = quiz; }
 
     public int getScore() { return score; }
     public void setScore(int score) { this.score = score; }

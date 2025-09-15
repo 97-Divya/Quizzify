@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/quiz")
@@ -37,30 +39,30 @@ public class QuizController {
     }
 
     // Update quiz
-@PutMapping("/update/{quizId}")
-public ResponseEntity<Quiz> updateQuiz(@PathVariable Long quizId, @RequestBody Quiz updatedQuiz) {
-    Quiz quiz = quizRepository.findById(quizId)
-            .orElseThrow(() -> new RuntimeException("Quiz not found"));
+    @PutMapping("/update/{quizId}")
+    public ResponseEntity<Quiz> updateQuiz(@PathVariable Long quizId, @RequestBody Quiz updatedQuiz) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new RuntimeException("Quiz not found"));
 
-    // Update quiz metadata
-    quiz.setTitle(updatedQuiz.getTitle());
-    quiz.setCreatedByRole(updatedQuiz.getCreatedByRole());
-    quiz.setCreatedByUsername(updatedQuiz.getCreatedByUsername());
+        // Update quiz metadata
+        quiz.setTitle(updatedQuiz.getTitle());
+        quiz.setCreatedByRole(updatedQuiz.getCreatedByRole());
+        quiz.setCreatedByUsername(updatedQuiz.getCreatedByUsername());
 
-    // Clear old questions (orphanRemoval=true deletes them)
-    quiz.getQuestions().clear();
+        // Clear old questions (orphanRemoval=true deletes them)
+        quiz.getQuestions().clear();
 
-    // Add all questions from frontend
-    if (updatedQuiz.getQuestions() != null) {
-        for (Question q : updatedQuiz.getQuestions()) {
-            q.setQuiz(quiz); // set the relationship
-            quiz.getQuestions().add(q);
+        // Add all questions from frontend
+        if (updatedQuiz.getQuestions() != null) {
+            for (Question q : updatedQuiz.getQuestions()) {
+                q.setQuiz(quiz); // set the relationship
+                quiz.getQuestions().add(q);
+            }
         }
-    }
 
-    Quiz savedQuiz = quizRepository.save(quiz);
-    return ResponseEntity.ok(savedQuiz);
-}
+        Quiz savedQuiz = quizRepository.save(quiz);
+        return ResponseEntity.ok(savedQuiz);
+    }
 
     // Get all quizzes
     @GetMapping("/all")
@@ -89,10 +91,28 @@ public ResponseEntity<Quiz> updateQuiz(@PathVariable Long quizId, @RequestBody Q
         return questionRepository.findByQuizId(quizId);
     }
 
-    // Get attempts (scores) for a quiz (returns Attempt entity with studentUsername, score, total)
+    // Get attempts (scores) for a quiz
     @GetMapping("/{quizId}/attempts")
     public ResponseEntity<List<Attempt>> getAttemptsForQuiz(@PathVariable Long quizId) {
-        List<Attempt> attempts = attemptRepository.findByQuizId(quizId);
+        List<Attempt> attempts = attemptRepository.findByQuiz_Id(quizId); // updated for ManyToOne
         return ResponseEntity.ok(attempts);
+    }
+
+    // Get stats for all quizzes
+    @GetMapping("/stats")
+    public List<Map<String, Object>> getQuizStats() {
+        List<Object[]> stats = attemptRepository.getQuizStats();
+        if (stats == null) return List.of(); // handle null safely
+
+        return stats.stream().map(o -> Map.<String, Object>of(
+                "quizId", o[0] != null ? (Long) o[0] : null,           // o[0] is Long
+                "maxScore", o[1] != null ? ((Number) o[1]).intValue() : 0,
+                "avgScore", o[2] != null ? ((Number) o[2]).doubleValue() : 0.0
+        )).collect(Collectors.toList());
+    }
+    // Get attempts of a student
+    @GetMapping("/attempts/student/{username}")
+    public List<Attempt> getStudentAttempts(@PathVariable String username) {
+        return attemptRepository.findByStudentUsername(username);
     }
 }

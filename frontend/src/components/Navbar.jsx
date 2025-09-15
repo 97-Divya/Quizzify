@@ -1,50 +1,84 @@
-import React from "react";
-import { AppBar, Toolbar, Typography, Button } from "@mui/material";
+import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-const Navbar = ({ userRole, username, setUserRole, setUsername }) => {
+const Navbar = ({ userRole, setUserRole, username, setUsername }) => {
   const navigate = useNavigate();
+
+  // Load user info from localStorage on mount
+  useEffect(() => {
+    const storedRole = localStorage.getItem("role");
+    const storedUsername = localStorage.getItem("username");
+
+    if (storedRole) setUserRole(storedRole);
+    if (storedUsername) setUsername(storedUsername);
+  }, [setUserRole, setUsername]);
 
   const handleLogout = () => {
     setUserRole("");
     setUsername("");
-    navigate("/");
+    localStorage.clear(); // remove everything
+    navigate("/"); // redirect to login
+  };
+
+  const dashboardRoutes = {
+    student: "/dashboard/student",
+    instructor: "/dashboard/instructor",
+    admin: "/admin",
   };
 
   return (
-    <AppBar position="static" color="primary">
-      <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Typography variant="h6">MyApp</Typography>
+    <nav style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "10px 20px",
+      backgroundColor: "#00796b",
+      color: "#fff"
+    }}>
+      <div style={{ fontWeight: "bold", fontSize: "20px" }}>MyApp</div>
 
-        <div>
-          {!userRole && (
-            <>
-              <Button color="inherit" component={Link} to="/">Login</Button>
-              <Button color="inherit" component={Link} to="/register">Register</Button>
-            </>
-          )}
-
-          {/* For all logged-in users, show only Dashboard and Logout */}
-          {userRole && (
-            <>
-              <Button
-                color="inherit"
-                onClick={() => {
-                  // Redirect based on role
-                  if (userRole === "student") navigate("/dashboard/student");
-                  else if (userRole === "instructor") navigate("/dashboard/instructor");
-                  else if (userRole === "admin") navigate("/admin");
-                }}
-              >
-                Dashboard
-              </Button>
-              <Button color="inherit" onClick={handleLogout}>Logout</Button>
-            </>
-          )}
-        </div>
-      </Toolbar>
-    </AppBar>
+      <div>
+        {!userRole ? (
+          <>
+            <Link to="/" style={linkStyle}>Login</Link>
+            <Link to="/register" style={linkStyle}>Register</Link>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => navigate(dashboardRoutes[userRole] || "/")}
+              style={buttonStyle}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={handleLogout}
+              style={buttonStyle}
+            >
+              Logout
+            </button>
+          </>
+        )}
+      </div>
+    </nav>
   );
+};
+
+// Common styles
+const linkStyle = {
+  color: "#fff",
+  textDecoration: "none",
+  marginRight: "15px",
+};
+
+const buttonStyle = {
+  padding: "5px 10px",
+  marginRight: "10px",
+  backgroundColor: "#004d40",
+  color: "#fff",
+  border: "none",
+  borderRadius: "4px",
+  cursor: "pointer",
 };
 
 export default Navbar;
